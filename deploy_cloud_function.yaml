@@ -1,0 +1,32 @@
+steps:
+  # Run pip install and pytest in the same build step
+  # (pip packages won't be preserved in future steps!)
+  - name: "python:3.11"
+    id: "tests"
+    entrypoint: "bash"
+    args:
+    - -c
+    - |
+      cd azure_log_analytics &&
+      pip install --upgrade pip &&
+      pip install poetry &&
+      poetry config virtualenvs.create false &&
+      poetry install &&
+      poetry run pytest .
+
+  # Package and deploy cloud function
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: "gcloud-functions-deploy"
+    args:
+    - gcloud
+    - functions
+    - deploy
+    - ${_FUNCTION_NAME}
+    - --source=${_SOURCE}
+    - --runtime=${_RUNTIME}
+
+substitutions:
+    # Default values
+    _FUNCTION_NAME: example-function
+    _RUNTIME: python311
+    _SOURCE: "app"

@@ -1,0 +1,40 @@
+steps:
+  # Init
+  - name: "gcr.io/${_SHARED_SERVICES_PROJECT}/terraform:0.13.7-dev"
+    entrypoint: "bash"
+    args:
+      - -c
+      - |
+        git config --global credential.'https://source.developers.google.com'.helper gcloud.sh &&
+        terraform init -no-color -backend-config=<REMOTE_STATE_BUCKET_NAME> -backend-config=prefix=terraform/state/${_ENV} terraform
+  # Validate
+  - name: "gcr.io/${_SHARED_SERVICES_PROJECT}/terraform:0.13.7-dev"
+    entrypoint: "terraform"
+    args: [
+      "validate",
+      "-no-color",
+      "terraform"
+    ]
+  # Plan
+  - name: "gcr.io/${_SHARED_SERVICES_PROJECT}/terraform:0.13.7-dev"
+    entrypoint: "terraform"
+    args: [
+      "plan",
+      "-no-color",
+      "-var-file=terraform/${_ENV}/${_ENV}.tfvars",
+      "terraform",
+    ]
+  # Apply
+  - name: "gcr.io/${_SHARED_SERVICES_PROJECT}/terraform:0.13.7-dev"
+    entrypoint: "bash"
+    args: [
+      "-c",
+      "for i in 1 2; do terraform apply -auto-approve -no-color -var-file=terraform/${_ENV}/${_ENV}.tfvars terraform && break; done",
+    ]
+# serviceAccount: projects/<GOOGLE_PROJECT_NAME>/serviceAccounts/<SERVICE_ACCOUNT_NAME>
+# options:
+#   logging: CLOUD_LOGGING_ONLY
+substitutions:
+  # Default values
+  _SHARED_SERVICES_PROJECT: "<GOOGLE_PROJECT_NAME>"
+  _ENV: dev
